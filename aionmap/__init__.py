@@ -159,9 +159,9 @@ class PortScannerBase(object):
         
 class PortScanner(PortScannerBase):
     @asyncio.coroutine
-    def scan(self, hosts='127.0.0.1', ports=None, arguments='-sV', sudo=False):
+    def scan(self, hosts='127.0.0.1', ports=None, arguments='-sV', sudo=False, sudo_passwd=None):
         yield from self._ensure_nmap_path_and_version()
-        scan_result = yield from self._scan_proc(*(self._get_scan_args(hosts, ports, arguments)), sudo = sudo)
+        scan_result = yield from self._scan_proc(*(self._get_scan_args(hosts, ports, arguments)), sudo=sudo, sudo_passwd=sudo_passwd)
         self._scan_result = scan_result
         return scan_result
         
