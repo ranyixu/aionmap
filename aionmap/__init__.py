@@ -73,10 +73,10 @@ class PortScannerBase(object):
         return (self._nmap_version_number, self._nmap_subversion_number)   
 
     @asyncio.coroutine
-    def listscan(self, hosts='127.0.0.1', dns_lookup = True, sudo = False):
+    def listscan(self, hosts='127.0.0.1', dns_lookup = True, sudo=False,  sudo_passwd=None):
         yield from self._ensure_nmap_path_and_version()
         nmap_args = self._get_scan_args(hosts, None, arguments = '-sL' if dns_lookup else '-sL -n')
-        return (yield from self._scan_proc(*nmap_args, sudo = sudo))
+        return (yield from self._scan_proc(*nmap_args, sudo=sudo, sudo_passwd=sudo_passwd))
     
     def analyse_nmap_xml_scan(self, nmap_xml_output=None, nmap_err='', nmap_err_keep_trace='', nmap_warn_keep_trace=''):
 
@@ -93,16 +93,22 @@ class PortScannerBase(object):
 
 
     @asyncio.coroutine
-    def _scan_proc(self, *nmap_args, sudo = False):
+    def _scan_proc(self, *nmap_args, sudo=False, sudo_passwd=None):
         proc = None
         try:
             if sudo:
-                proc = yield from asyncio.create_subprocess_exec('sudo', self._nmap_path, *nmap_args, stdout = asyncio.subprocess.PIPE,
-                                                            stderr = asyncio.subprocess.PIPE)
+                if not sudo_passwd:
+                    raise NmapError("sudo must with 'sudo_passwd' argument")
+                proc = yield from asyncio.create_subprocess_exec('sudo', '-S', '-p', 'xxxxx', self._nmap_path, *nmap_args, stdin=asyncio.subprocess.PIPE,
+                                                                 stdout = asyncio.subprocess.PIPE,
+                                                                 stderr = asyncio.subprocess.PIPE)
             else:
                 proc = yield from asyncio.create_subprocess_exec(self._nmap_path, *nmap_args, stdout = asyncio.subprocess.PIPE,
                                                             stderr = asyncio.subprocess.PIPE)
-            nmap_output, nmap_err = yield from proc.communicate()
+            nmap_output, nmap_err = yield from proc.communicate(None if not sudo else (sudo_passwd.encode()+b"\n"))
+            if nmap_err:
+                if sudo and nmap_err.strip() == b'xxxxx':
+                    nmap_err=b''
         except:
             raise
         finally:
@@ -168,7 +174,7 @@ class PortScanner(PortScannerBase):
 gt_py35 = (sys.version_info.major == 3 and sys.version_info.minor >= 5) or sys.version_info.major > 3
 if gt_py35:
     class PortScannerIterable(object):
-        def __init__(self, scanner, hosts, args, batch_count = 3, sudo = False):
+        def __init__(self, scanner, hosts, args, batch_count = 3, sudo = False, sudo_passwd=None):
             self._scanner = scanner
             self._hosts = hosts
             self._args = args
@@ -179,6 +185,7 @@ if gt_py35:
             self._stopped = False
             self._started = False
             self.sudo = sudo
+            self.sudo_passwd=sudo_passwd
             
         def _done_fu_generator(self, done_futs):
             yield from done_futs
@@ -197,17 +204,17 @@ if gt_py35:
         def _fill_future(self):
             try:
                 while len(self._futs) < self._batch_count:
-                    self._futs.add(asyncio.ensure_future(self._scanner._scan_proc(self._ip_gen.send(None), *self._args, sudo = self.sudo)))
+                    self._futs.add(asyncio.ensure_future(self._scanner._scan_proc(self._ip_gen.send(None), *self._args, sudo=self.sudo, sudo_passwd=self.sudo_passwd)))
             except StopIteration:
                 self._stop_ip_gen = True
         
         async def __anext__(self):
             if not self._started:
                 self._started = True
-                list_scan = await self._scanner.listscan(self._hosts ,False, sudo = self.sudo)
+                list_scan = await self._scanner.listscan(self._hosts, False, sudo=self.sudo, sudo_passwd=self.sudo_passwd)
                 if not list_scan:
                     return
-                ip_list = list_scan['scan'].keys()
+                ip_list = [i.address for i in list_scan.hosts]
                 if not ip_list:
                     raise StopAsyncIteration()
                 self._ip_gen = self._ip_generator(ip_list)
@@ -233,9 +240,9 @@ if gt_py35:
         
     class PortScannerYield(PortScannerBase):
         
-        def scan(self, hosts, ports, arguments, batch_count = 3, sudo = False):
+        def scan(self, hosts, ports, arguments, batch_count=3, sudo=False, sudo_passwd=None):
             args = self._get_scan_args('', ports, arguments)
-            return PortScannerIterable(self, hosts, args, batch_count, sudo)
+            return PortScannerIterable(self, hosts, args, batch_count, sudo, sudo_passwd)
 
     
 class NmapError(Exception):
