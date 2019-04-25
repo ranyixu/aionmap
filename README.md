@@ -20,7 +20,7 @@ async def main():
     print(await scanner.nmap_version())
     result = await scanner.listscan('192.168.0.0/24', False)
     print(result)
-    result = await scanner.scan('google.com', None, '-sS -sV -n')
+    result = await scanner.scan('google.com', None, '-sS -sV -n', sudo=True, sudo_passwd='xxx')
     print(result)
     
 if __name__ == '__main__':
@@ -38,7 +38,7 @@ import aionmap
 
 async def main():
     scanner =  aionmap.PortScannerYield()
-    async for result in scanner.scan('192.168.0.0/24', '80,22', '-sS -n --open'):
+    async for result in scanner.scan('192.168.0.0/24', '80,22', '-sS -n --open', sudo=True, sudo_passwd='xxx'):
         if isinstance(result, Exception):
             print("error")
         else:
