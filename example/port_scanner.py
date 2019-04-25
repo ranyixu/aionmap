@@ -12,7 +12,7 @@ async def main():
     print(await scanner.nmap_version())
     result = await scanner.listscan('192.168.0.0/24', False)
     print(result)
-    result = await scanner.scan('localhost', None, '-sS -sV -n')
+    result = await scanner.scan('localhost', None, '-sS -sV -n', sudo=True, sudo_passwd='xxx')
     print(result)
     
 if __name__ == '__main__':
