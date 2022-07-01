@@ -9,7 +9,7 @@
 The scan result parsed by [libnmap.parser.NmapParser](https://libnmap.readthedocs.io/en/latest/parser.html#module-libnmap.parser), so [python-libnmap](https://pypi.org/project/python-nmap/) is required. and the parsed-result is [libnmap.objects.NmapReport](https://libnmap.readthedocs.io/en/latest/objects/nmapreport.html). 
 
 ### PortScanner
-A port scanner seem to python-nmap PortScanner. It is run in a process and wait until process exit with **yield from** or **await**.
+A port scanner similar to python-nmap PortScanner. It is run in a process and wait until process exit with **yield from** or **await**.
 eg:
 ```python
 import aionmap
@@ -28,7 +28,7 @@ if __name__ == '__main__':
     loop.run_until_complete(main())
 ```
 ### PortScannerYield
-A port scanner seem to python-nmap PortScannerYield,  but **async for** instead. It can only run with environment where Python  version greater than 3.5. The scanner run with multi processes at the same time, default is 3 processes, you can control it by argument **batch_count** when call function **PortScannerYield.scan**.
+A port scanner similar to python-nmap PortScannerYield,  but **async for** instead. It can only run with environment where Python  version greater than 3.5. The scanner run with multi processes at the same time, default is 3 processes, you can control it by argument **batch_count** when call function **PortScannerYield.scan**.
 eg:
 ```python
 import asyncio
