@@ -1,5 +1,5 @@
 import asyncio
-import collections
+import collections.abc
 import os
 import re
 import shlex
@@ -144,8 +144,8 @@ class PortScannerBase(object):
         )
         
     def _get_scan_args(self, hosts, ports, arguments):
-        assert isinstance(hosts, (str, collections.Iterable)), 'Wrong type for [hosts], should be a string or Iterable [was {0}]'.format(type(hosts))
-        assert isinstance(ports, (str, collections.Iterable, type(None))), 'Wrong type for [ports], should be a string or Iterable [was {0}]'.format(type(ports))  # noqa
+        assert isinstance(hosts, (str, collections.abc.Iterable)), 'Wrong type for [hosts], should be a string or Iterable [was {0}]'.format(type(hosts))
+        assert isinstance(ports, (str, collections.abc.Iterable, type(None))), 'Wrong type for [ports], should be a string or Iterable [was {0}]'.format(type(ports))  # noqa
         assert isinstance(arguments, str), 'Wrong type for [arguments], should be a string [was {0}]'.format(type(arguments))  # noqa
         
         if not isinstance(hosts, str):
