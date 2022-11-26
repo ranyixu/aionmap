@@ -7,8 +7,9 @@ Created on 2018-05-23
 import aionmap
 import asyncio
 
+
 async def main():
-    scanner =  aionmap.PortScanner()
+    scanner = aionmap.PortScanner()
     print(await scanner.nmap_version())
     result = await scanner.listscan('192.168.0.0/24', False)
     print(result)

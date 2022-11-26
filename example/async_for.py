@@ -10,7 +10,7 @@ import aionmap
 
 
 async def main():
-    scanner =  aionmap.PortScannerYield()
+    scanner = aionmap.PortScannerYield()
     async for result in scanner.scan('192.168.0.0/24', '80,22', '-sS -n --open', sudo=True, sudo_passwd='xxx'):
         if isinstance(result, Exception):
             print("error")
