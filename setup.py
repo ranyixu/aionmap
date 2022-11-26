@@ -9,7 +9,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='aionmap',
-    version='0.0.2',
+    version='0.0.3',
     author='ranyixu',
     author_email='1015243376@qq.com',
     packages=find_packages(),
@@ -27,6 +27,10 @@ setup(
         "Topic :: Software Development :: Libraries :: Python Modules",  
         "Programming Language :: Python :: 3.4",  
         "Programming Language :: Python :: 3.5",  
-        "Programming Language :: Python :: 3.6",  
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
     ]
 )
