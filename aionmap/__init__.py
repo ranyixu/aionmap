@@ -19,19 +19,17 @@ class PortScannerBase(object):
         self._nmap_version_number = 0       # nmap version number
         self._nmap_subversion_number = 0    # nmap subversion number
         self._nmap_search_path = nmap_search_path
-    
-    @asyncio.coroutine
-    def _ensure_nmap_path_and_version(self):
+
+    async def _ensure_nmap_path_and_version(self):
         if self._nmap_path:
             return
 
-        @asyncio.coroutine
-        def _test_nmap_path(nmap_path):
+        async def _test_nmap_path(nmap_path):
             proc = None
             try:
-                proc = yield from asyncio.create_subprocess_exec(nmap_path, '-V', stdout=asyncio.subprocess.PIPE)
+                proc = await asyncio.create_subprocess_exec(nmap_path, '-V', stdout=asyncio.subprocess.PIPE)
                 while not proc.stdout.at_eof():
-                    line = (yield from proc.stdout.readline()).decode('utf-8')
+                    line = (await proc.stdout.readline()).decode('utf-8')
                     match_res = regex_nmap_version.match(line)
                     if match_res is None:
                         continue
@@ -54,11 +52,11 @@ class PortScannerBase(object):
                         proc.terminate()
                     except ProcessLookupError:
                         pass
-                    yield from proc.wait()
+                    await proc.wait()
             return False, None, None
 
         for p in self._nmap_search_path:
-            found, ver_major_, ver_sub_ = yield from _test_nmap_path(p)
+            found, ver_major_, ver_sub_ = await _test_nmap_path(p)
             if not found:
                 continue
 
@@ -69,17 +67,15 @@ class PortScannerBase(object):
 
         raise NmapError('nmap program was not found in path')
 
-    @asyncio.coroutine
-    def nmap_version(self):
-        yield from self._ensure_nmap_path_and_version()
+    async def nmap_version(self):
+        await self._ensure_nmap_path_and_version()
         return self._nmap_version_number, self._nmap_subversion_number
 
-    @asyncio.coroutine
-    def listscan(self, hosts='127.0.0.1', dns_lookup=True, sudo=False,  sudo_passwd=None):
-        yield from self._ensure_nmap_path_and_version()
+    async def listscan(self, hosts='127.0.0.1', dns_lookup=True, sudo=False,  sudo_passwd=None):
+        await self._ensure_nmap_path_and_version()
         nmap_args = self._get_scan_args(hosts, None, arguments='-sL' if dns_lookup else '-sL -n')
-        return (yield from self._scan_proc(*nmap_args, sudo=sudo, sudo_passwd=sudo_passwd))
-    
+        return (await self._scan_proc(*nmap_args, sudo=sudo, sudo_passwd=sudo_passwd))
+
     def analyse_nmap_xml_scan(self, nmap_xml_output=None, nmap_err='', nmap_err_keep_trace='', nmap_warn_keep_trace=''):
         try:
             report = NmapParser.parse_fromstring(nmap_xml_output)
@@ -92,14 +88,13 @@ class PortScannerBase(object):
             else:
                 raise NmapError(nmap_xml_output)
 
-    @asyncio.coroutine
-    def _scan_proc(self, *nmap_args, sudo=False, sudo_passwd=None):
+    async def _scan_proc(self, *nmap_args, sudo=False, sudo_passwd=None):
         proc = None
         try:
             if sudo:
                 if not sudo_passwd:
                     raise NmapError("sudo must with 'sudo_passwd' argument")
-                proc = yield from asyncio.create_subprocess_exec(
+                proc = await asyncio.create_subprocess_exec(
                     'sudo', '-S', '-p', 'nmap sudo prompt: ',
                     self._nmap_path, *nmap_args,
                     stdin=asyncio.subprocess.PIPE,
@@ -107,12 +102,12 @@ class PortScannerBase(object):
                     stderr=asyncio.subprocess.PIPE
                 )
             else:
-                proc = yield from asyncio.create_subprocess_exec(
+                proc = await asyncio.create_subprocess_exec(
                     self._nmap_path, *nmap_args,
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.PIPE
                 )
-            nmap_output, nmap_err = yield from proc.communicate(None if not sudo else (sudo_passwd.encode()+b"\n"))
+            nmap_output, nmap_err = await proc.communicate(None if not sudo else (sudo_passwd.encode()+b"\n"))
             if nmap_err:
                 if sudo and nmap_err.strip() == b'nmap sudo prompt: ':
                     nmap_err = b''
@@ -145,13 +140,12 @@ class PortScannerBase(object):
         finally:
             if proc:
                 try:
-                    yield from self._terminate_proc(proc, sudo_passwd)
+                    await self._terminate_proc(proc, sudo_passwd)
                 except ProcessLookupError:
                     pass
-                yield from proc.wait()
+                await proc.wait()
 
-    @asyncio.coroutine
-    def _terminate_proc(self, proc, sudo_passwd=None):
+    async def _terminate_proc(self, proc, sudo_passwd=None):
         try:
             proc.terminate()
             return
@@ -160,29 +154,28 @@ class PortScannerBase(object):
         except:
             if not sudo_passwd:
                 raise
-        children = yield from self._find_process_by_ppid(proc.pid)
+        children = await self._find_process_by_ppid(proc.pid)
         for pid in children:
-            yield from self._terminate_proc_by_sudo(pid, sudo_passwd)
-        yield from self._terminate_proc_by_sudo(proc.pid, sudo_passwd)
+            await self._terminate_proc_by_sudo(pid, sudo_passwd)
+        await self._terminate_proc_by_sudo(proc.pid, sudo_passwd)
 
     def _terminate_proc_by_sudo(self, pid, sudo_passwd, signo=15):
-        proc_kill = yield from asyncio.create_subprocess_exec(
+        proc_kill = await asyncio.create_subprocess_exec(
             'sudo', '-S', '-p', 'nmap sudo prompt: ', 'kill', '-%s' % signo, str(pid),
             stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE
         )
-        yield from proc_kill.communicate(sudo_passwd.encode() + b"\n")
-        yield from proc_kill.wait()
+        await proc_kill.communicate(sudo_passwd.encode() + b"\n")
+        await proc_kill.wait()
 
-    @asyncio.coroutine
-    def _find_process_by_ppid(self, ppid):
-        proc = yield from asyncio.create_subprocess_exec(
+    async def _find_process_by_ppid(self, ppid):
+        proc = await asyncio.create_subprocess_exec(
             "ps", "-efo", "pid,ppid", "--ppid", str(ppid),
             stdout=asyncio.subprocess.PIPE
         )
-        stdout, stderr = yield from proc.communicate()
-        yield from proc.wait()
+        stdout, stderr = await proc.communicate()
+        await proc.wait()
 
         first_line = True
         pid_list = []
@@ -206,7 +199,7 @@ class PortScannerBase(object):
             'Wrong type for [ports], should be a string or Iterable [was {0}]'.format(type(ports))  # noqa
         assert isinstance(arguments, str), \
             'Wrong type for [arguments], should be a string [was {0}]'.format(type(arguments))  # noqa
-        
+
         if not isinstance(hosts, str):
             hosts = ' '.join(hosts)
         assert all(_ not in arguments for _ in ('-oX', '-oA')), 'Xml output can\'t be redirected from command line'
@@ -218,13 +211,12 @@ class PortScannerBase(object):
 
 
 class PortScanner(PortScannerBase):
-    @asyncio.coroutine
-    def scan(self, hosts='127.0.0.1', ports=None, arguments='-sV', sudo=False, sudo_passwd=None):
-        yield from self._ensure_nmap_path_and_version()
-        scan_result = yield from self._scan_proc(*(self._get_scan_args(hosts, ports, arguments)), sudo=sudo, sudo_passwd=sudo_passwd)
+    async def scan(self, hosts='127.0.0.1', ports=None, arguments='-sV', sudo=False, sudo_passwd=None):
+        await self._ensure_nmap_path_and_version()
+        scan_result = await self._scan_proc(*(self._get_scan_args(hosts, ports, arguments)), sudo=sudo, sudo_passwd=sudo_passwd)
         self._scan_result = scan_result
         return scan_result
-        
+
     def __getitem__(self, host):
         """
         returns a host detail
@@ -247,21 +239,21 @@ if gt_py35:
             self._started = False
             self.sudo = sudo
             self.sudo_passwd = sudo_passwd
-            
+
         def _done_fu_generator(self, done_futs):
-            yield from done_futs
-        
+            await done_futs
+
         def _get_result(self):
             fu = self._done_fut_gen.send(None)
             exception = fu.exception()
             return exception if exception is not None else fu.result()
-        
+
         async def __aiter__(self):
             return self
-        
+
         def _ip_generator(self, ip_list):
-            yield from ip_list
-        
+            await ip_list
+
         def _fill_future(self):
             try:
                 while len(self._futs) < self._batch_count:
@@ -317,7 +309,7 @@ if gt_py35:
                 if not self._futs and not pending:
                     self._stopped = True
             return self._get_result()
-        
+
     class PortScannerYield(PortScannerBase):
 
         def scan(self, hosts, ports=None, arguments="-sV", batch_count=3, sudo=False, sudo_passwd=None):
@@ -338,4 +330,4 @@ class NmapError(Exception):
 
     def __repr__(self):
         return 'NmapError exception {0}'.format(self.value)
-    
+
