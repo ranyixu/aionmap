@@ -165,6 +165,7 @@ class PortScannerBase(object):
             yield from self._terminate_proc_by_sudo(pid, sudo_passwd)
         yield from self._terminate_proc_by_sudo(proc.pid, sudo_passwd)
 
+    @asyncio.coroutine
     def _terminate_proc_by_sudo(self, pid, sudo_passwd, signo=15):
         proc_kill = yield from asyncio.create_subprocess_exec(
             'sudo', '-S', '-p', 'nmap sudo prompt: ', 'kill', '-%s' % signo, str(pid),
