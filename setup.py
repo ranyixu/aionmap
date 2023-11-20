@@ -19,7 +19,6 @@ setup(
     install_requires = ["python-libnmap"],
     url='https://github.com/ranyixu/aionmap',
     description='A python nmap package seem to python-nmap(https://pypi.org/project/python-nmap/), but for asyncio',
-    long_description = open('README.rst').read(),
     classifiers=[  
         "Intended Audience :: Developers",  
         "Operating System :: OS Independent",  
