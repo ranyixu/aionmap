@@ -240,7 +240,7 @@ if gt_py35:
             self.sudo = sudo
             self.sudo_passwd = sudo_passwd
 
-        def _done_fu_generator(self, done_futs):
+        async def _done_fu_generator(self, done_futs):
             await done_futs
 
         def _get_result(self):
