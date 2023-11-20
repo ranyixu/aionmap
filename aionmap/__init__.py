@@ -251,7 +251,7 @@ if gt_py35:
         async def __aiter__(self):
             return self
 
-        def _ip_generator(self, ip_list):
+        async def _ip_generator(self, ip_list):
             await ip_list
 
         def _fill_future(self):
